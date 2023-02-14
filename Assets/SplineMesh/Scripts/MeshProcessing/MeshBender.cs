@@ -21,7 +21,7 @@ namespace SplineMesh {
         private bool useSpline;
         private Spline spline;
         private float intervalStart, intervalEnd;
-        private CubicBezierCurve curve;
+        private Curve curve;
         private Dictionary<float, CurveSample> sampleCache = new Dictionary<float, CurveSample>();
 
         private SourceMesh source;
@@ -38,6 +38,17 @@ namespace SplineMesh {
         }
         
         private FillingMode mode = FillingMode.StretchToInterval;
+
+		private UVMode _uvMode;
+		public UVMode uvMode{
+			get{return _uvMode; }
+			set{if(value==_uvMode)
+					return;
+				SetDirty();
+				_uvMode = value;
+			}
+		}
+
         /// <summary>
         /// The scaling mode along the spline
         /// </summary>
@@ -50,20 +61,31 @@ namespace SplineMesh {
             }
         }
 
-        /// <summary>
-        /// Sets a curve along which the mesh will be bent.
-        /// The mesh will be updated if the curve changes.
-        /// </summary>
-        /// <param name="curve">The <see cref="CubicBezierCurve"/> to bend the source mesh along.</param>
-        public void SetInterval(CubicBezierCurve curve) {
+		/// <summary>
+		/// Value to add to the U coordinate of each vertex. Meant for using the total length before the curve start when using curve space, should be 0 otherwise.
+		/// </summary>
+		public float uOffset;
+
+		/// <summary>
+		/// Sets a curve along which the mesh will be bent.
+		/// The mesh will be updated if the curve changes.
+		/// </summary>
+		/// <param name="curve">The <see cref="CubicBezierCurve"/> to bend the source mesh along.</param>
+		public void SetInterval(Spline spline, Curve curve) {
             if (this.curve == curve) return;
             if (curve == null) throw new ArgumentNullException("curve");
             if (this.curve != null) {
                 this.curve.Changed.RemoveListener(SetDirty);
             }
             this.curve = curve;
-            spline = null;
-            curve.Changed.AddListener(SetDirty);
+
+			if (this.spline != null) {
+                // unlistening previous spline
+                this.spline.CurveChanged.RemoveListener(SetDirty);
+            }
+            this.spline = spline;
+            spline.CurveChanged.AddListener(SetDirty);
+            
             useSpline = false;
             SetDirty();
         }
@@ -77,8 +99,8 @@ namespace SplineMesh {
         /// <param name="spline">The <see cref="SplineMesh"/> to bend the source mesh along.</param>
         /// <param name="intervalStart">Distance from the spline start to place the mesh minimum X.<param>
         /// <param name="intervalEnd">Distance from the spline start to stop deforming the source mesh.</param>
-        public void SetInterval(Spline spline, float intervalStart, float intervalEnd = 0) {
-            if (this.spline == spline && this.intervalStart == intervalStart && this.intervalEnd == intervalEnd) return;
+        public void SetInterval(Spline spline, float intervalStart, float intervalEnd = 0) { 
+            if (this.spline == spline && this.intervalStart == intervalStart && this.intervalEnd == intervalEnd && useSpline) return;
             if (spline == null) throw new ArgumentNullException("spline");
             if (intervalStart < 0 || intervalStart >= spline.Length) {
                 throw new ArgumentOutOfRangeException("interval start must be 0 or greater and lesser than spline length (was " + intervalStart + ")");
@@ -174,6 +196,7 @@ namespace SplineMesh {
         private void FillOnce() {
             sampleCache.Clear();
             var bentVertices = new List<MeshVertex>(source.Vertices.Count);
+			var colors = new List<Color>();
             // for each mesh vertex, we found its projection on the curve
             foreach (var vert in source.Vertices) {
                 float distance = vert.position.x - source.MinX;
@@ -198,6 +221,8 @@ namespace SplineMesh {
                     sampleCache[distance] = sample;
                 }
 
+				colors.Add(new Color(sample.location.x, sample.location.y, sample.location.z, 1));
+
                 bentVertices.Add(sample.GetBent(vert));
             }
 
@@ -205,7 +230,8 @@ namespace SplineMesh {
                 source.Mesh,
                 source.Triangles,
                 bentVertices.Select(b => b.position),
-                bentVertices.Select(b => b.normal));
+                bentVertices.Select(b => b.normal),
+				colors: colors);
         }
 
         private void FillRepeat() {
@@ -215,8 +241,8 @@ namespace SplineMesh {
             int repetitionCount = Mathf.FloorToInt(intervalLength / source.Length);
 
 
-            // building triangles and UVs for the repeated mesh
-            var triangles = new List<int>();
+			// building triangles and UVs for the repeated mesh
+			var triangles = new List<int>();
             var uv = new List<Vector2>();
             var uv2 = new List<Vector2>();
             var uv3 = new List<Vector2>();
@@ -225,19 +251,25 @@ namespace SplineMesh {
             var uv6 = new List<Vector2>();
             var uv7 = new List<Vector2>();
             var uv8 = new List<Vector2>();
-            for (int i = 0; i < repetitionCount; i++) {
+
+			var colors = new List<Color>();
+
+			for (int i = 0; i < repetitionCount; i++) {
                 foreach (var index in source.Triangles) {
                     triangles.Add(index + source.Vertices.Count * i);
                 }
-                uv.AddRange(source.Mesh.uv);
-                uv2.AddRange(source.Mesh.uv2);
-                uv3.AddRange(source.Mesh.uv3);
-                uv4.AddRange(source.Mesh.uv4);
+				
+				//MODIFICATION FROM THE ORIGINAL! Offset the Uvs of each repetition
+                uv.AddRange( uvsRepeatingFill(source.Mesh.uv, i, repetitionCount) );
+
+                uv2.AddRange( uvsRepeatingFill(source.Mesh.uv2, i, repetitionCount) );
+                uv3.AddRange( uvsRepeatingFill(source.Mesh.uv3, i, repetitionCount) );
+                uv4.AddRange( uvsRepeatingFill(source.Mesh.uv4, i, repetitionCount) );
 #if UNITY_2018_2_OR_NEWER
-                uv5.AddRange(source.Mesh.uv5);
-                uv6.AddRange(source.Mesh.uv6);
-                uv7.AddRange(source.Mesh.uv7);
-                uv8.AddRange(source.Mesh.uv8);
+                uv5.AddRange( uvsRepeatingFill(source.Mesh.uv5, i, repetitionCount) );
+                uv6.AddRange( uvsRepeatingFill(source.Mesh.uv6, i, repetitionCount) );
+                uv7.AddRange( uvsRepeatingFill(source.Mesh.uv7, i, repetitionCount) );
+                uv8.AddRange( uvsRepeatingFill(source.Mesh.uv8, i, repetitionCount) );
 #endif
             }
 
@@ -268,7 +300,8 @@ namespace SplineMesh {
                         }
                         sampleCache[distance] = sample;
                     }
-                    bentVertices.Add(sample.GetBent(vert));
+					colors.Add(new Color(sample.location.x, sample.location.y, sample.location.z, 1));
+					bentVertices.Add(sample.GetBent(vert));
                 }
                 offset += source.Length;
             }
@@ -285,18 +318,20 @@ namespace SplineMesh {
                 uv5,
                 uv6,
                 uv7,
-                uv8);
+                uv8,
+				colors: colors);
         }
 
         private void FillStretch() {
             var bentVertices = new List<MeshVertex>(source.Vertices.Count);
+			var colors = new List<Color>();
             sampleCache.Clear();
             // for each mesh vertex, we found its projection on the curve
             foreach (var vert in source.Vertices) {
                 float distanceRate = source.Length == 0 ? 0 : Math.Abs(vert.position.x - source.MinX) / source.Length;
                 CurveSample sample;
                 if (!sampleCache.TryGetValue(distanceRate, out sample)) {
-                    if (!useSpline) {
+					if (!useSpline) {
                         sample = curve.GetSampleAtDistance(curve.Length * distanceRate);
                     } else {
                         float intervalLength = intervalEnd == 0 ? spline.Length - intervalStart : intervalEnd - intervalStart;
@@ -310,20 +345,56 @@ namespace SplineMesh {
                     }
                     sampleCache[distanceRate] = sample;
                 }
+				
+				colors.Add(new Color(sample.location.x, sample.location.y, sample.location.z, 1));
 
-                bentVertices.Add(sample.GetBent(vert));
-            }
+				if(sample.tangent != Vector3.zero)
+                	bentVertices.Add(sample.GetBent(vert));
+				else
+					bentVertices.Add(vert);
+			}
 
-            MeshUtility.Update(result,
+			var uvList = source.Mesh.uv;
+			if (!useSpline)
+			{
+				if(uvMode == UVMode.Extend)
+					uvList = uvList.Select(uv => new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0)).ToArray();
+				else if(uvMode == UVMode.Stretch)
+					uvList = uvList.Select(
+						uv => {
+							Vector2 newUVS = new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0);
+							newUVS.x /= spline.Length;
+							return newUVS;
+						}).ToArray();
+				else{} //Repeat
+
+			}
+			else
+			{
+				if(uvMode == UVMode.Extend)
+					uvList = uvList.Select(uv => new Vector2(uv.x * spline.Length, uv.y)).ToArray();
+			}
+		
+			MeshUtility.Update(result,
                 source.Mesh,
                 source.Triangles,
                 bentVertices.Select(b => b.position),
-                bentVertices.Select(b => b.normal));
+                bentVertices.Select(b => b.normal),
+				uv:uvList,
+				colors: colors
+				);
             if (TryGetComponent(out MeshCollider collider)) {
                 collider.sharedMesh = result;
             }
         }
 
-
+		private IEnumerable<Vector2> uvsRepeatingFill(Vector2[] inputUvs, int index, int numSegments){
+			if(uvMode == UVMode.Repeat)
+				return inputUvs;
+			else if(uvMode == UVMode.Stretch)
+				return inputUvs.Select(uv => new Vector2(uv.x / numSegments, uv.y) + new Vector2(index/(float)numSegments, 0));
+			else //UVMode.Extend
+				return inputUvs.Select(uv => uv+new Vector2(index, 0));
+		}
     }
 }

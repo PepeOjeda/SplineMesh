@@ -52,7 +52,8 @@ namespace SplineMesh {
             IEnumerable<Vector2> uv5 = null,
             IEnumerable<Vector2> uv6 = null,
             IEnumerable<Vector2> uv7 = null,
-            IEnumerable<Vector2> uv8 = null) {
+            IEnumerable<Vector2> uv8 = null,
+			IEnumerable<Color> colors = null) {
             mesh.hideFlags = source.hideFlags;
 #if UNITY_2017_3_OR_NEWER
             mesh.indexFormat = source.indexFormat;
@@ -71,7 +72,8 @@ namespace SplineMesh {
             mesh.uv7 = uv7 == null ? source.uv7 : uv7.ToArray();
             mesh.uv8 = uv8 == null ? source.uv8 : uv8.ToArray();
 #endif
-            mesh.triangles = triangles == null ? source.triangles : triangles.ToArray();
+			mesh.colors = colors == null ? source.colors : colors.ToArray();
+			mesh.triangles = triangles == null ? source.triangles : triangles.ToArray();
             mesh.RecalculateBounds();
             mesh.RecalculateTangents();
         }
