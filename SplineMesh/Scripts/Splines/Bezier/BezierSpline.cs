@@ -31,7 +31,7 @@ public class BezierSpline : Spline
 		}
 		RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
 			type = ListChangeType.Add,
-			newItems = new List<SplineNode>() { node }
+			newItem = node 
 		});
 
 		UpdateAfterCurveChanged();
@@ -54,7 +54,7 @@ public class BezierSpline : Spline
 		curves.Insert(index, curve);
 		RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
 			type = ListChangeType.Insert,
-			newItems = new List<SplineNode>() { node },
+			newItem =  node ,
 			insertIndex = index
 		});
 		UpdateAfterCurveChanged();

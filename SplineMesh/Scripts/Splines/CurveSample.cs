@@ -10,14 +10,14 @@ namespace SplineMesh {
     /// </summary>
     public struct CurveSample
     {
-        public readonly Vector3 location;
-        public readonly Vector3 tangent;
-        public readonly Vector3 up;
-        public readonly Vector2 scale;
-        public readonly float roll;
-        public readonly float distanceInCurve;
-        public readonly float timeInCurve;
-        public readonly Curve curve;
+        public Vector3 location;
+        public Vector3 tangent;
+        public Vector3 up;
+        public Vector2 scale;
+        public float roll;
+        public float distanceInCurve;
+        public float timeInCurve;
+        public Curve curve;
 
         private Quaternion rotation;
 
@@ -35,7 +35,7 @@ namespace SplineMesh {
         }
 
         public CurveSample(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float roll, float distanceInCurve, float timeInCurve, Curve curve) {
-            this.location = location;
+			this.location = location;
             this.tangent = tangent;
             this.up = up;
             this.roll = roll;
@@ -44,7 +44,20 @@ namespace SplineMesh {
             this.timeInCurve = timeInCurve;
             this.curve = curve;
             rotation = Quaternion.identity;
-        }
+		}
+
+		public void ChangeAllValues(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float roll, float distanceInCurve, float timeInCurve, Curve curve)
+		{
+			this.location = location;
+            this.tangent = tangent;
+            this.up = up;
+            this.roll = roll;
+            this.scale = scale;
+            this.distanceInCurve = distanceInCurve;
+            this.timeInCurve = timeInCurve;
+            this.curve = curve;
+            rotation = Quaternion.identity;
+		}
 
         public override bool Equals(object obj) {
             if (obj == null || GetType() != obj.GetType()) {
@@ -66,11 +79,19 @@ namespace SplineMesh {
         }
 
         public static bool operator ==(CurveSample cs1, CurveSample cs2) {
-            return cs1.Equals(cs2);
+            return cs1.curve==cs2.curve &&
+				cs1.location == cs2.location &&
+				cs1.tangent == cs2.tangent &&
+				cs1.up == cs2.up &&
+				cs1.scale == cs2.scale &&
+				cs1.roll == cs2.roll &&
+				cs1.distanceInCurve == cs2.distanceInCurve &&
+				cs1.timeInCurve == cs2.timeInCurve &&
+				cs1.rotation == cs2.rotation;
         }
 
         public static bool operator !=(CurveSample cs1, CurveSample cs2) {
-            return !cs1.Equals(cs2);
+            return !(cs1==cs2);
         }
 
         /// <summary>

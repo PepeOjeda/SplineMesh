@@ -19,7 +19,7 @@ namespace SplineMesh
 			}
 			RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
 				type = ListChangeType.Add,
-				newItems = new List<SplineNode>() { node }
+				newItem = node 
 			});
 
 			UpdateAfterCurveChanged();
@@ -43,7 +43,7 @@ namespace SplineMesh
 			curves.Insert(index, curve);
 			RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
 				type = ListChangeType.Insert,
-				newItems = new List<SplineNode>() { node },
+				newItem = node ,
 				insertIndex = index
 			});
 			UpdateAfterCurveChanged();

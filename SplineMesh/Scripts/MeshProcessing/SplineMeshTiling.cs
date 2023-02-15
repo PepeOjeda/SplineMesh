@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using UnityEngine;
-#if UNITY_EDITOR
-
-#endif
 
 namespace SplineMesh {
 	public enum UVMode{Repeat, Extend, Stretch};
@@ -109,27 +105,36 @@ namespace SplineMesh {
             }
 
             // we destroy the unused objects. This is classic pooling to recycle game objects.
-            foreach (var go in generated.transform
-                .Cast<Transform>()
-                .Select(child => child.gameObject).Except(used)) {
-                UOUtility.Destroy(go);
-            }
+			foreach(Transform child in generated.transform)
+			{
+				foreach(Transform grandchild in child)
+				{
+					if(!used.Contains(grandchild.gameObject))
+		                UOUtility.Destroy(grandchild.gameObject);
+				}
+			}
         }
 
 		[System.NonSerialized] public Material not_shared_material;
-        private GameObject FindOrCreate(string name) {
+		static Type[] baseComponents = {typeof(MeshFilter),
+					typeof(MeshRenderer),
+					typeof(MeshBender)};
+		static Type[] componentsWithCollider = {typeof(MeshFilter),
+					typeof(MeshRenderer),
+					typeof(MeshBender),
+					typeof(MeshCollider)};
+		private GameObject FindOrCreate(string name) {
             var childTransform = generated.transform.Find(name);
             GameObject res;
             if (childTransform == null) {
-				List<Type> components = new List<Type>(){typeof(MeshFilter),
-					typeof(MeshRenderer),
-					typeof(MeshBender)};
+				Type[] components;
 				if(generateCollider)
-					components.Add(typeof(MeshCollider));
-
+					components = componentsWithCollider;
+				else
+					components = baseComponents;
 				res = UOUtility.Create(name,
                     generated,
-					components.ToArray()
+					components
                     );
                 res.isStatic = !updateInPlayMode;
             } else {

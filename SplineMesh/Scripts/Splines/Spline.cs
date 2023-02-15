@@ -20,13 +20,13 @@ namespace SplineMesh {
         /// Warning, this collection shouldn't be changed manualy. Use specific methods to add and remove nodes.
         /// It is public only for the user to enter exact values of position and direction in the inspector (and serialization purposes).
         /// </summary>
-        public List<SplineNode> nodes = new List<SplineNode>();
+        public List<SplineNode> nodes = new List<SplineNode>(20);
 
         /// <summary>
         /// The generated curves. Should not be changed in any way, use nodes instead.
         /// </summary>
         [HideInInspector]
-        public List<Curve> curves = new List<Curve>();
+        public List<Curve> curves = new List<Curve>(20);
 
         /// <summary>
         /// The spline length in world units.
@@ -59,11 +59,14 @@ namespace SplineMesh {
         /// <summary>
         /// Clear the nodes and curves, then add two default nodes for the reset spline to be visible in editor.
         /// </summary>
-        public void Reset() {
+        public void Reset(bool raiseEvent) {
             nodes.Clear();
             curves.Clear();
             AddNode(new SplineNode(new Vector3(5, 0, 0), new Vector3(5, 0, -3)));
             AddNode(new SplineNode(new Vector3(10, 0, 0), new Vector3(10, 0, 3)));
+			if(!raiseEvent)
+				return;
+
             RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
                 type = ListChangeType.clear
             });
@@ -186,7 +189,7 @@ namespace SplineMesh {
 
             RaiseNodeListChanged(new ListChangedEventArgs<SplineNode>() {
                 type = ListChangeType.Remove,
-                removedItems = new List<SplineNode>() { node },
+                removedItem =  node ,
                 removeIndex = index
             });
             UpdateAfterCurveChanged();
@@ -261,8 +264,8 @@ namespace SplineMesh {
     }
     public class ListChangedEventArgs<T> : EventArgs {
         public ListChangeType type;
-        public List<T> newItems;
-        public List<T> removedItems;
+        public T newItem;
+        public T removedItem;
         public int insertIndex, removeIndex;
     }
     public delegate void ListChangeHandler<T2>(object sender, ListChangedEventArgs<T2> args);

@@ -18,7 +18,7 @@ namespace SplineMesh {
         private int STEP_COUNT = 5;
         private float T_STEP => 1.0f / STEP_COUNT;
 
-		private List<CurveSample> samples;
+		private CurveSample[] samples;
 
 		/// <summary>
 		/// This event is raised when of of the control points has moved.
@@ -33,7 +33,7 @@ namespace SplineMesh {
         /// <param name="n2"></param>
         public CubicBezierCurve(SplineNode n1, SplineNode n2, int step_count) {
 			STEP_COUNT = step_count;
-			samples = new List<CurveSample>(STEP_COUNT);
+			samples = new CurveSample[STEP_COUNT+1];
 			this.n1 = n1;
             this.n2 = n2;
             n1.Changed += ComputeSamples;
@@ -117,23 +117,24 @@ namespace SplineMesh {
         }
 
         private void ComputeSamples(object sender, EventArgs e) {
-            samples.Clear();
             Length = 0;
             Vector3 previousPosition = GetLocation(0);
-            for (float t = 0; t < 1; t += T_STEP) {
+			int i = 0;
+			for (float t = 0; t < 1; t += T_STEP) {
                 Vector3 position = GetLocation(t);
                 Length += Vector3.Distance(previousPosition, position);
                 previousPosition = position;
-                samples.Add(CreateSample(Length, t));
-            }
+                SetSample(ref samples[i], Length, t);
+				i++;
+			}
             Length += Vector3.Distance(previousPosition, GetLocation(1));
-            samples.Add(CreateSample(Length, 1));
+            SetSample(ref samples[i], Length, 1);
 
             if (Changed != null) Changed.Invoke();
         }
 
-        private CurveSample CreateSample(float distance, float time) {
-            return new CurveSample(
+        private void SetSample(ref CurveSample sample, float distance, float time) {
+            sample.ChangeAllValues(
                 GetLocation(time),
                 GetTangent(time),
                 GetUp(time),
@@ -212,7 +213,7 @@ namespace SplineMesh {
             if(closestIndex == 0) {
                 previous = samples[closestIndex];
                 next = samples[closestIndex + 1];
-            } else if(closestIndex == samples.Count - 1) {
+            } else if(closestIndex == samples.Length - 1) {
                 previous = samples[closestIndex - 1];
                 next = samples[closestIndex];
             } else {

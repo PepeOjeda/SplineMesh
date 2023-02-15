@@ -40,15 +40,11 @@ namespace SplineMesh {
         }
 
         private void Spline_NodeListChanged(object sender, ListChangedEventArgs<SplineNode> args) {
-            if(args.newItems != null) {
-                foreach (var node in args.newItems) {
-                    node.Changed += OnNodeChanged;
-                }
-            }
-            if(args.removedItems != null) {
-                foreach (var node in args.removedItems) {
-                    node.Changed -= OnNodeChanged;
-                }
+            if(args.newItem != null) {
+				args.newItem.Changed += OnNodeChanged;
+			}
+            if(args.removedItem != null) {
+				args.removedItem.Changed -= OnNodeChanged;
             }
         }
 
