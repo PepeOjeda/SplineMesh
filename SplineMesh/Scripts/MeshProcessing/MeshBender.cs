@@ -386,13 +386,24 @@ namespace SplineMesh {
 						newUVS.x /= spline.Length;
 						meshData.uv[i] = newUVS;
 					}
-					else{} //Repeat
+					else if (uvMode == UVMode.Repeat)
+					{
+						meshData.uv[i] = uv;
+					}
 
 				}
 				else
 				{
 					if(uvMode == UVMode.Extend)
 						meshData.uv[i] = new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0);
+					else if (uvMode == UVMode.Stretch)
+					{
+						meshData.uv[i] = uv;
+					}
+					else if (uvMode == UVMode.Repeat)
+					{
+						meshData.uv[i] = uv;
+					}
 				}
 			}
 
