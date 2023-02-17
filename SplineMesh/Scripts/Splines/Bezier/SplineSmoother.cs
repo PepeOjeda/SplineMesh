@@ -18,26 +18,47 @@ namespace SplineMesh {
             }
         }
 
-        [Range(0, 1f)] public float curvature = 0.3f;
+		[SerializeField] [HideInInspector] bool _autoSmoothOnChange;
+		public bool autoSmoothOnChange
+		{
+			get => _autoSmoothOnChange;
+			set{
+				_autoSmoothOnChange = value;
+				manageSubscriptions(_autoSmoothOnChange);
+			}
+		}
+
+		[Range(0, 1f)] public float curvature = 0.3f;
 
         private void OnValidate() {
             SmoothAll();
         }
 
         private void OnEnable() {
-            Spline.NodeListChanged += Spline_NodeListChanged;
-            foreach(var node in Spline.nodes) {
-                node.Changed += OnNodeChanged;
-            }
-            SmoothAll();
-        }
+            if(autoSmoothOnChange)
+				manageSubscriptions(true);
+		}
 
         private void OnDisable() {
-            Spline.NodeListChanged -= Spline_NodeListChanged;
-            foreach (var node in Spline.nodes) {
-                node.Changed -= OnNodeChanged;
-            }
+            if(autoSmoothOnChange)
+				manageSubscriptions(false);
         }
+
+		void manageSubscriptions(bool subscribe)
+		{
+			if(subscribe)
+	            Spline.NodeListChanged += Spline_NodeListChanged;
+			else
+    	        Spline.NodeListChanged -= Spline_NodeListChanged;
+
+			for (int i = 0; i < spline.nodes.Count; i++)
+			{
+				if(subscribe)
+					spline.nodes[i].Changed += OnNodeChanged;
+				else
+					spline.nodes[i].Changed -= OnNodeChanged;
+			}
+		}
 
         private void Spline_NodeListChanged(object sender, ListChangedEventArgs<SplineNode> args) {
             if(args.newItem != null) {
@@ -50,7 +71,12 @@ namespace SplineMesh {
 
         private void OnNodeChanged(object sender, EventArgs e) {
             var node = (SplineNode)sender;
-            SmoothNode(node);
+			SmoothNodeAndNeighbours(node);
+		}
+
+		public void SmoothNodeAndNeighbours(SplineNode node)
+		{
+			SmoothNode(node);
             var index = Spline.nodes.IndexOf(node);
             if(index > 0) {
                 SmoothNode(Spline.nodes[index - 1]);
@@ -59,7 +85,7 @@ namespace SplineMesh {
                 SmoothNode(Spline.nodes[index + 1]);
 
             }
-        }
+		}
 
         private void SmoothNode(SplineNode node) {
             var index = Spline.nodes.IndexOf(node);
