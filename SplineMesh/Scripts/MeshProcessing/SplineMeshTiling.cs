@@ -75,11 +75,11 @@ namespace SplineMesh {
 			if (toUpdate)
 			{
 				CreateMeshes();
-				toUpdate = false;
 			}
 		}
 
         public void CreateMeshes() {
+			toUpdate = false;
 #if UNITY_EDITOR
             // we don't update if we are in prefab mode
             if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null) return;
@@ -115,7 +115,12 @@ namespace SplineMesh {
 			}
         }
 
-		[System.NonSerialized] public Material not_shared_material;
+		public class MaterialInstance
+		{
+			public int originalID;
+			public Material instance;
+		}
+		[System.NonSerialized] public MaterialInstance not_shared_material;
 		static Type[] baseComponents = {typeof(MeshFilter),
 					typeof(MeshRenderer),
 					typeof(MeshBender)};
@@ -141,15 +146,20 @@ namespace SplineMesh {
                 res = childTransform.gameObject;
             }
 
-			if(Application.isPlaying && not_shared_material == null)
+			if(not_shared_material == null)
+				not_shared_material = new MaterialInstance{instance = null, originalID = 0};
+				
+			if(Application.isPlaying && material.GetInstanceID() != not_shared_material.originalID )
             {
+				Destroy(not_shared_material.instance);
 				res.GetComponent<MeshRenderer>().material = material;
-				not_shared_material = res.GetComponent<MeshRenderer>().material; // this creates a copy that is only used by this mesh. Used to do time-based fades and other effects like that
+				not_shared_material.instance = res.GetComponent<MeshRenderer>().material; // this creates a copy that is only used by this mesh. Used to do time-based fades and other effects like that
+				not_shared_material.originalID = material.GetInstanceID();
 			}
 			else if(!Application.isPlaying)
 				res.GetComponent<MeshRenderer>().material = material;
 			else if (not_shared_material!=null)
-				res.GetComponent<MeshRenderer>().material = not_shared_material;
+				res.GetComponent<MeshRenderer>().material = not_shared_material.instance;
 			res.GetComponent<MeshRenderer>().shadowCastingMode = shadowMode;
 
 			if(generateCollider)
@@ -167,7 +177,7 @@ namespace SplineMesh {
 
 		void OnDestroy(){
 			if(Application.isPlaying && not_shared_material != null)
-				Destroy(not_shared_material);
+				Destroy(not_shared_material.instance);
 		}	
     }
 }
