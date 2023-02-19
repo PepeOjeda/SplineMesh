@@ -24,7 +24,7 @@ namespace SplineMesh {
         [Tooltip("Mesh to bend along the spline.")]
         public Mesh mesh;
         [Tooltip("Material to apply on the bent mesh.")]
-        public Material material;
+        public Material originalMaterial;
         [Tooltip("Physic material to apply on the bent mesh.")]
         public PhysicMaterial physicMaterial;
         [Tooltip("Translation to apply on the mesh before bending it.")]
@@ -115,12 +115,8 @@ namespace SplineMesh {
 			}
         }
 
-		public class MaterialInstance
-		{
-			public int originalID;
-			public Material instance;
-		}
-		[System.NonSerialized] public MaterialInstance not_shared_material;
+		
+		[System.NonSerialized] public MaterialInstance instancedMaterial;
 		static Type[] baseComponents = {typeof(MeshFilter),
 					typeof(MeshRenderer),
 					typeof(MeshBender)};
@@ -146,20 +142,20 @@ namespace SplineMesh {
                 res = childTransform.gameObject;
             }
 
-			if(not_shared_material == null)
-				not_shared_material = new MaterialInstance{instance = null, originalID = 0};
+			if(instancedMaterial == null)
+				instancedMaterial = new MaterialInstance{instance = null, originalID = 0};
 				
-			if(Application.isPlaying && material.GetInstanceID() != not_shared_material.originalID )
+			if(Application.isPlaying && originalMaterial.GetInstanceID() != instancedMaterial.originalID )
             {
-				Destroy(not_shared_material.instance);
-				res.GetComponent<MeshRenderer>().material = material;
-				not_shared_material.instance = res.GetComponent<MeshRenderer>().material; // this creates a copy that is only used by this mesh. Used to do time-based fades and other effects like that
-				not_shared_material.originalID = material.GetInstanceID();
+				if(instancedMaterial != null)
+					instancedMaterial.isAvailable = true;
+
+				instancedMaterial = MaterialInstancePool.instance.getMaterialInstance(originalMaterial.GetInstanceID());
+				res.GetComponent<MeshRenderer>().sharedMaterial = instancedMaterial.instance;
 			}
 			else if(!Application.isPlaying)
-				res.GetComponent<MeshRenderer>().material = material;
-			else if (not_shared_material!=null)
-				res.GetComponent<MeshRenderer>().material = not_shared_material.instance;
+				res.GetComponent<MeshRenderer>().sharedMaterial = originalMaterial;
+
 			res.GetComponent<MeshRenderer>().shadowCastingMode = shadowMode;
 
 			if(generateCollider)
@@ -175,9 +171,13 @@ namespace SplineMesh {
             return res;
         }
 
-		void OnDestroy(){
-			if(Application.isPlaying && not_shared_material != null)
-				Destroy(not_shared_material.instance);
-		}	
+		void OnDisable()
+		{
+			if(instancedMaterial != null)
+			{
+				instancedMaterial.isAvailable = true;
+				instancedMaterial = null;
+			}
+		}
     }
 }
