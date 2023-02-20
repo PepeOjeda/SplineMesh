@@ -2,19 +2,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MaterialInstancePool : MonoBehaviour
+public class MaterialInstancePool
 {
-	public static MaterialInstancePool instance{ get; private set; }
+	private static MaterialInstancePool _instance;
+	public static MaterialInstancePool instance{ 
+		get{
+			if(_instance == null)
+				_instance = new MaterialInstancePool();
+			return _instance;
+		}
+	}
 	Dictionary<int, List<MaterialInstance>> materialInstancesByID = new Dictionary<int, List<MaterialInstance>>();
 
-
-	void Awake()
+	[RuntimeInitializeOnLoadMethod]
+	static void Initialize()
 	{
-		if(instance != null && instance!=this)
+		_instance = new MaterialInstancePool();
+	}
+	
+	private MaterialInstancePool()
+	{
+		if(_instance != null && _instance!=this)
 		{
-			Destroy(instance);
+			_instance.CleanUp();
 		}
-		instance = this;
+		_instance = this;
+		Application.quitting += CleanUp;
 	}
 
 	public MaterialInstance getMaterialInstance(int idOfOriginal)
@@ -53,15 +66,16 @@ public class MaterialInstancePool : MonoBehaviour
 		}
 	}
 
-	void OnDestroy()
+	void CleanUp()
 	{
-		foreach(var kv in materialInstancesByID)
+		foreach (var kv in materialInstancesByID)
 		{
-			foreach(var mat in kv.Value)
+			foreach (var mat in kv.Value)
 			{
-				Destroy(mat.instance);
+				UnityEngine.Object.Destroy(mat.instance);
 			}
 		}
+		Application.quitting -= CleanUp;
 	}
 }
 
