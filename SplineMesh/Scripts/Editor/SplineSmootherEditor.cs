@@ -19,6 +19,9 @@ namespace SplineMesh
 			if(newValueAutoSmooth!=smoother.autoSmoothOnChange)
 				Undo.RecordObject(target, "toggle auto smooth");
 			smoother.autoSmoothOnChange = newValueAutoSmooth;
+
+			if(GUILayout.Button("Smooth now"))
+				smoother.SmoothAll();
 		}
 	}
 }

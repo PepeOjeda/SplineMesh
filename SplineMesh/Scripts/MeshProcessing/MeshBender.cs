@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace SplineMesh {
@@ -58,7 +59,8 @@ namespace SplineMesh {
                 if (value == mode) return;
                 SetDirty();
                 mode = value;
-            }
+				onSourceMeshChanged();
+			}
         }
 
 		/// <summary>
@@ -210,11 +212,12 @@ namespace SplineMesh {
 			meshData.colors = new Color[source.Vertices.Count];
 			meshData.uv = new Vector2[source.Vertices.Count];
 			meshData.uv2 = new Vector2[source.Vertices.Count];
+			lastRepetitionCount = -1;
 		}
 
         private void FillOnce() {
 			// for each mesh vertex, we found its projection on the curve
-			for (int i = 0; i < source.Vertices.Count; i++)
+			Parallel.For(0, source.Vertices.Count, i =>
 			{
 				var vert = source.Vertices[i];
 				float distance = vert.position.x - source.MinX;
@@ -249,20 +252,21 @@ namespace SplineMesh {
 				meshData.colors[i] = (new Color(sample.location.x, sample.location.y, sample.location.z, 1));
 
 				MeshVertex bentSample;
-				if(sample.tangent != Vector3.zero)
-                	bentSample=(sample.GetBent(vert));
+				if (sample.tangent != Vector3.zero)
+					bentSample = (sample.GetBent(vert));
 				else
-					bentSample=(vert);
-					
+					bentSample = (vert);
+
 				meshData.bentPositions[i] = bentSample.position;
 				meshData.bentNormals[i] = bentSample.normal;
-			}
+			});
 
 			MeshUtility.Update(result,
                 source.Mesh,
                 source.Triangles,
                 meshData.bentPositions,
                 meshData.bentNormals,
+				uv:null,
 				colors: meshData.colors);
         }
 
@@ -275,58 +279,64 @@ namespace SplineMesh {
 
 
 			// building triangles and UVs for the repeated mesh
-			var triangles = new int[repetitionCount * source.Mesh.triangles.Length];
+			var triangles = new int[repetitionCount * source.Triangles.Length];
 
-			if(repetitionCount != lastRepetitionCount)
+			//if(repetitionCount != lastRepetitionCount)
 			{
-				meshData.bentPositions = new Vector3[repetitionCount * source.Mesh.vertices.Length];
+				meshData.bentPositions = new Vector3[repetitionCount * source.Vertices.Count];
 				meshData.bentNormals = new Vector3[repetitionCount * source.Mesh.normals.Length];
-				meshData.colors = new Color[repetitionCount * source.Mesh.vertices.Length];
+				meshData.colors = new Color[repetitionCount *source.Vertices.Count];
 				meshData.uv = new Vector2[repetitionCount * source.Mesh.uv.Length];
 				meshData.uv2 = new Vector2[repetitionCount * source.Mesh.uv2.Length];
 			}
 
 			int startIndex = 0;
 			for (int repetition = 0; repetition < repetitionCount; repetition++) {
-				for (int i = 0; i < source.Mesh.triangles.Length; i++)
-					triangles[i] = (source.Mesh.triangles[i] + source.Vertices.Count * repetition);
+				for (int i = 0; i < source.Triangles.Length; i++)
+					triangles[i + source.Triangles.Length*repetition] = (source.Triangles[i] + source.Vertices.Count * repetition);
 			
 				uvsRepeatingFill(source.Mesh.uv, meshData.uv, startIndex, repetition, repetitionCount);
 				uvsRepeatingFill(source.Mesh.uv2, meshData.uv2, startIndex, repetition, repetitionCount);
-				startIndex += source.Mesh.triangles.Length;
+				startIndex += source.Mesh.vertices.Length;
 			}
 
             // computing vertices and normals
             float offset = 0;
             for (int repetition = 0; repetition < repetitionCount; repetition++) {
 
-                // for each mesh vertex, we found its projection on the curve
-                for (int i = 0; i < source.Vertices.Count; i++)
+				// for each mesh vertex, we found its projection on the curve
+				Parallel.For(0, source.Vertices.Count, (i, state) =>
+				//for (int i = 0; i < source.Vertices.Count; i++)
 				{
 					var vert = source.Vertices[i];
-                    float distance = vert.position.x - source.MinX + offset;
-                    CurveSample sample;
-					if (!useSpline) {
-						if (distance > curve.Length) continue;
+					float distance = vert.position.x - source.MinX + offset;
+					CurveSample sample;
+					if (!useSpline)
+					{
+						if (distance > curve.Length) return;
 						sample = curve.GetSampleAtDistance(distance);
-					} else {
+					}
+					else
+					{
 						float distOnSpline = intervalStart + distance;
-						while (distOnSpline > spline.Length) {
+						while (distOnSpline > spline.Length)
+						{
 							distOnSpline -= spline.Length;
 						}
 						sample = spline.GetSampleAtDistance(distOnSpline);
-                        
-                    }
+
+					}
 					MeshVertex bentSample;
-					if(sample.tangent != Vector3.zero)
-						bentSample=(sample.GetBent(vert));
+					if (sample.tangent != Vector3.zero)
+						bentSample = (sample.GetBent(vert));
 					else
-						bentSample=(vert);
-						
-					meshData.bentPositions[i] = bentSample.position;
-					meshData.bentNormals[i] = bentSample.normal;
-                }
-                offset += source.Length;
+						bentSample = (vert);
+
+					meshData.bentPositions[i+repetition*source.Vertices.Count] = bentSample.position;
+					meshData.bentNormals[i+repetition*source.Vertices.Count] = bentSample.normal;
+				}
+				);
+				offset += source.Length;
             }
 
 			lastRepetitionCount = repetitionCount;
@@ -342,45 +352,48 @@ namespace SplineMesh {
 
         private void FillStretch() {
 			// for each mesh vertex, we found its projection on the curve
-
 			Vector2[] sourceUVs = source.Mesh.uv;
-			for (int i = 0; i < source.Vertices.Count; i++)
+			Parallel.For(0, source.Vertices.Count, i =>
 			{
 				var vert = source.Vertices[i];
-                float distanceRate = source.Length == 0 ? 0 : Math.Abs(vert.position.x - source.MinX) / source.Length;
-                CurveSample sample;
+				float distanceRate = source.Length == 0 ? 0 : Math.Abs(vert.position.x - source.MinX) / source.Length;
+				CurveSample sample;
 				{
-					if (!useSpline) {
-                        sample = curve.GetSampleAtDistance(curve.Length * distanceRate);
-                    } else {
-                        float intervalLength = intervalEnd == 0 ? spline.Length - intervalStart : intervalEnd - intervalStart;
-                        float distOnSpline = intervalStart + intervalLength * distanceRate;
-                        if(distOnSpline > spline.Length) {
-                            distOnSpline = spline.Length;
-                            Debug.Log("dist " + distOnSpline + " spline length " + spline.Length + " start " + intervalStart);
-                        }
+					if (!useSpline)
+					{
+						sample = curve.GetSampleAtDistance(curve.Length * distanceRate);
+					}
+					else
+					{
+						float intervalLength = intervalEnd == 0 ? spline.Length - intervalStart : intervalEnd - intervalStart;
+						float distOnSpline = intervalStart + intervalLength * distanceRate;
+						if (distOnSpline > spline.Length)
+						{
+							distOnSpline = spline.Length;
+							Debug.Log("dist " + distOnSpline + " spline length " + spline.Length + " start " + intervalStart);
+						}
 
-                        sample = spline.GetSampleAtDistance(distOnSpline);
-                    }
-                }
-				
-				meshData.colors[i]=(new Color(sample.location.x, sample.location.y, sample.location.z, 1));
+						sample = spline.GetSampleAtDistance(distOnSpline);
+					}
+				}
+
+				meshData.colors[i] = (new Color(sample.location.x, sample.location.y, sample.location.z, 1));
 
 				MeshVertex bentSample;
-				if(sample.tangent != Vector3.zero)
-                	bentSample=(sample.GetBent(vert));
+				if (sample.tangent != Vector3.zero)
+					bentSample = (sample.GetBent(vert));
 				else
-					bentSample=(vert);
-					
+					bentSample = (vert);
+
 				meshData.bentPositions[i] = bentSample.position;
 				meshData.bentNormals[i] = bentSample.normal;
-				
+
 				Vector2 uv = sourceUVs[i];
 				if (!useSpline)
 				{
-					if(uvMode == UVMode.Extend)
+					if (uvMode == UVMode.Extend)
 						meshData.uv[i] = new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0);
-					else if(uvMode == UVMode.Stretch)
+					else if (uvMode == UVMode.Stretch)
 					{
 						Vector2 newUVS = new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0);
 						newUVS.x /= spline.Length;
@@ -394,8 +407,8 @@ namespace SplineMesh {
 				}
 				else
 				{
-					if(uvMode == UVMode.Extend)
-						meshData.uv[i] = new Vector2(uv.x * curve.Length, uv.y) + new Vector2(uOffset, 0);
+					if (uvMode == UVMode.Extend)
+						meshData.uv[i] = new Vector2(uv.x * spline.Length, uv.y) + new Vector2(uOffset, 0);
 					else if (uvMode == UVMode.Stretch)
 					{
 						meshData.uv[i] = uv;
@@ -405,9 +418,9 @@ namespace SplineMesh {
 						meshData.uv[i] = uv;
 					}
 				}
-			}
+			});
 
-		
+
 			MeshUtility.Update(result,
                 source.Mesh,
                 source.Triangles,
@@ -425,17 +438,21 @@ namespace SplineMesh {
 			if(uvMode == UVMode.Repeat)
 				outputUvs =  inputUvs;
 			else if(uvMode == UVMode.Stretch)
-				for (int i = 0; i < inputUvs.Length; i++)
+				Parallel.For (0, inputUvs.Length, i=>
+				//for (int i = 0; i < inputUvs.Length; i++)
 				{
 					var uv = inputUvs[i];
 					outputUvs[i+ startIndex] = new Vector2(uv.x / numSegments, uv.y) + new Vector2(repetition / (float)numSegments, 0);
 				}
+				);
 			else //UVMode.Extend
-				for (int i = 0; i < inputUvs.Length; i++)
+				Parallel.For (0, inputUvs.Length, i=>
+				//for (int i = 0; i < inputUvs.Length; i++)
 				{
 					var uv = inputUvs[i];
-					outputUvs[i+ startIndex] = uv+new Vector2(repetition, 0);
+					outputUvs[i + startIndex] = uv + new Vector2(repetition, 0);
 				}
+			);
 		}
     }
 }

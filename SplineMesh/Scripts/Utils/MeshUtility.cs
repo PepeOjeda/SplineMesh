@@ -48,12 +48,13 @@ namespace SplineMesh {
             Vector2[] uv = null,
             Vector2[] uv2 = null,
 			Color[] colors = null) {
-            mesh.hideFlags = source.hideFlags;
+
+			mesh.hideFlags = source.hideFlags;
 #if UNITY_2017_3_OR_NEWER
             mesh.indexFormat = source.indexFormat;
 #endif
-
-            mesh.vertices = vertices == null ? source.vertices : vertices;
+			mesh.triangles = null;
+			mesh.vertices = vertices == null ? source.vertices : vertices;
             mesh.normals = normals == null ? source.normals : normals;
             mesh.uv = uv == null? source.uv : uv;
             mesh.uv2 = uv2 == null ? source.uv2 : uv2;
