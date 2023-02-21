@@ -271,7 +271,7 @@ namespace SplineMesh {
             }
         }
 
-        [MenuItem("GameObject/3D Object/Spline")]
+        [MenuItem("GameObject/3D Object/Spline/Linear Spline")]
         public static void CreateSpline() {
             new GameObject("Spline", typeof(Spline));
         }
