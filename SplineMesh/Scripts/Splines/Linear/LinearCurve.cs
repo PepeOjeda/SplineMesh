@@ -53,7 +53,6 @@ namespace SplineMesh
 					(n2.Position - n1.Position).normalized,
 					Vector3.Lerp(n1.Up, n2.Up, time),
 					Vector2.Lerp(n1.Scale, n2.Scale, time),
-					Mathf.Lerp(n1.Roll, n2.Roll, time),
 					(n1.Position - n2.Position).magnitude,
 					time,
 					this

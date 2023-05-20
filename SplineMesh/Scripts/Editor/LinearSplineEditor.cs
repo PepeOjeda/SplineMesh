@@ -252,21 +252,18 @@ namespace SplineMesh {
             var directionProp = nodeProperty.FindPropertyRelative("direction");
             var upProp = nodeProperty.FindPropertyRelative("up");
             var scaleProp = nodeProperty.FindPropertyRelative("scale");
-            var rollProp = nodeProperty.FindPropertyRelative("roll");
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(positionProp, new GUIContent("Position"));
             EditorGUILayout.PropertyField(directionProp, new GUIContent("Direction"));
             EditorGUILayout.PropertyField(upProp, new GUIContent("Up"));
             EditorGUILayout.PropertyField(scaleProp, new GUIContent("Scale"));
-            EditorGUILayout.PropertyField(rollProp, new GUIContent("Roll"));
 
             if (EditorGUI.EndChangeCheck()) {
                 node.Position = positionProp.vector3Value;
                 node.Direction = directionProp.vector3Value;
                 node.Up = upProp.vector3Value;
                 node.Scale = scaleProp.vector2Value;
-                node.Roll = rollProp.floatValue;
                 serializedObject.Update();
             }
         }

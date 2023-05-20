@@ -78,20 +78,6 @@ namespace SplineMesh {
         [SerializeField]
         private Vector2 scale = Vector2.one;
 
-        /// <summary>
-        /// Roll to apply at this node.
-        /// This value is not used on the spline itself but is commonly used on bended content.
-        /// </summary>
-        public float Roll {
-            get { return roll; }
-            set {
-                if (roll == value) return;
-                roll = value;
-                if (Changed != null) Changed(this, EventArgs.Empty);
-            }
-        }
-        [SerializeField]
-        private float roll;
 
         public SplineNode(Vector3 position, Vector3 direction) {
             Position = position;
@@ -99,7 +85,7 @@ namespace SplineMesh {
         }
 
         /// <summary>
-        /// Event raised when position, direction, scale or roll changes.
+        /// Event raised when position, direction, scale changes.
         /// </summary>
         [HideInInspector]
         public event EventHandler Changed;

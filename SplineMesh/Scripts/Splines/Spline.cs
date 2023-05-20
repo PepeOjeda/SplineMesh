@@ -220,7 +220,6 @@ namespace SplineMesh {
             end.Changed -= EndNodeChanged;
             end.Position = start.Position;
             end.Direction = start.Direction;
-            end.Roll = start.Roll;
             end.Scale = start.Scale;
             end.Up = start.Up;
             end.Changed += EndNodeChanged;
@@ -230,7 +229,6 @@ namespace SplineMesh {
             start.Changed -= StartNodeChanged;
             start.Position = end.Position;
             start.Direction = end.Direction;
-            start.Roll = end.Roll;
             start.Scale = end.Scale;
             start.Up = end.Up;
             start.Changed += StartNodeChanged;

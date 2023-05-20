@@ -112,9 +112,6 @@ namespace SplineMesh {
             return Vector2.Lerp(n1.Scale, n2.Scale, t);
         }
 
-        private float GetRoll(float t) {
-            return Mathf.Lerp(n1.Roll, n2.Roll, t);
-        }
 
         private void ComputeSamples(object sender, EventArgs e) {
             Length = 0;
@@ -139,7 +136,6 @@ namespace SplineMesh {
                 GetTangent(time),
                 GetUp(time),
                 GetScale(time),
-                GetRoll(time),
                 distance,
                 time,
                 this);

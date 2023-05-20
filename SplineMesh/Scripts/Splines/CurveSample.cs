@@ -14,7 +14,6 @@ namespace SplineMesh {
         public Vector3 tangent;
         public Vector3 up;
         public Vector2 scale;
-        public float roll;
         public float distanceInCurve;
         public float timeInCurve;
         public Curve curve;
@@ -22,23 +21,21 @@ namespace SplineMesh {
         private Quaternion rotation;
 
         /// <summary>
-        /// Rotation is a look-at quaternion calculated from the tangent, roll and up vector. Mixing non zero roll and custom up vector is not advised.
+        /// Rotation is a look-at quaternion
         /// </summary>
         public Quaternion Rotation {
             get {
                 if (rotation == Quaternion.identity) {
-                    var upVector = Vector3.Cross(tangent, Vector3.Cross(Quaternion.AngleAxis(roll, Vector3.forward) * up, tangent).normalized);
-                    rotation = Quaternion.LookRotation(tangent, upVector);
+                    rotation = Quaternion.LookRotation(tangent, up);
                 }
                 return rotation;
             }
         }
 
-        public CurveSample(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float roll, float distanceInCurve, float timeInCurve, Curve curve) {
+        public CurveSample(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float distanceInCurve, float timeInCurve, Curve curve) {
 			this.location = location;
             this.tangent = tangent;
             this.up = up;
-            this.roll = roll;
             this.scale = scale;
             this.distanceInCurve = distanceInCurve;
             this.timeInCurve = timeInCurve;
@@ -46,12 +43,11 @@ namespace SplineMesh {
             rotation = Quaternion.identity;
 		}
 
-		public void ChangeAllValues(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float roll, float distanceInCurve, float timeInCurve, Curve curve)
+		public void ChangeAllValues(Vector3 location, Vector3 tangent, Vector3 up, Vector2 scale, float distanceInCurve, float timeInCurve, Curve curve)
 		{
 			this.location = location;
             this.tangent = tangent;
             this.up = up;
-            this.roll = roll;
             this.scale = scale;
             this.distanceInCurve = distanceInCurve;
             this.timeInCurve = timeInCurve;
@@ -68,7 +64,6 @@ namespace SplineMesh {
                 tangent == other.tangent &&
                 up == other.up &&
                 scale == other.scale &&
-                roll == other.roll &&
                 distanceInCurve == other.distanceInCurve &&
                 timeInCurve == other.timeInCurve;
 
@@ -84,7 +79,6 @@ namespace SplineMesh {
 				cs1.tangent == cs2.tangent &&
 				cs1.up == cs2.up &&
 				cs1.scale == cs2.scale &&
-				cs1.roll == cs2.roll &&
 				cs1.distanceInCurve == cs2.distanceInCurve &&
 				cs1.timeInCurve == cs2.timeInCurve &&
 				cs1.rotation == cs2.rotation;
@@ -107,24 +101,15 @@ namespace SplineMesh {
                 Vector3.Lerp(a.tangent, b.tangent, t).normalized,
                 Vector3.Lerp(a.up, b.up, t),
                 Vector2.Lerp(a.scale, b.scale, t),
-                Mathf.Lerp(a.roll, b.roll, t),
                 Mathf.Lerp(a.distanceInCurve, b.distanceInCurve, t),
                 Mathf.Lerp(a.timeInCurve, b.timeInCurve, t),
                 a.curve);
         }
 
-        public MeshVertex GetBent(MeshVertex vert) {
-            var res = new MeshVertex(vert.position, vert.normal, vert.uv);
+        public MeshVertex GetBent(MeshVertex res) {
 
             // application of scale
             res.position = Vector3.Scale(res.position, new Vector3(0, scale.y, scale.x));
-
-            // application of roll
-            res.position = Quaternion.AngleAxis(roll, Vector3.right) * res.position;
-            res.normal = Quaternion.AngleAxis(roll, Vector3.right) * res.normal;
-
-            // reset X value
-            res.position.x = 0;
 
             // application of the rotation + location
             Quaternion q = Rotation * Quaternion.Euler(0, -90, 0);
