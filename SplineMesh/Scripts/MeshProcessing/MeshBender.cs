@@ -251,11 +251,9 @@ namespace SplineMesh {
 
 				meshData.colors[i] = (new Color(sample.location.x, sample.location.y, sample.location.z, 1));
 
-				MeshVertex bentSample;
+				MeshVertex bentSample = vert;
 				if (sample.tangent != Vector3.zero)
 					bentSample = (sample.GetBent(vert));
-				else
-					bentSample = (vert);
 
 				meshData.bentPositions[i] = bentSample.position;
 				meshData.bentNormals[i] = bentSample.normal;
@@ -326,11 +324,9 @@ namespace SplineMesh {
 						sample = spline.GetSampleAtDistance(distOnSpline);
 
 					}
-					MeshVertex bentSample;
+					MeshVertex bentSample = vert;
 					if (sample.tangent != Vector3.zero)
 						bentSample = (sample.GetBent(vert));
-					else
-						bentSample = (vert);
 
 					meshData.bentPositions[i+repetition*source.Vertices.Count] = bentSample.position;
 					meshData.bentNormals[i+repetition*source.Vertices.Count] = bentSample.normal;
@@ -379,11 +375,9 @@ namespace SplineMesh {
 
 				meshData.colors[i] = (new Color(sample.location.x, sample.location.y, sample.location.z, 1));
 
-				MeshVertex bentSample;
+				MeshVertex bentSample = vert;
 				if (sample.tangent != Vector3.zero)
 					bentSample = (sample.GetBent(vert));
-				else
-					bentSample = (vert);
 
 				meshData.bentPositions[i] = bentSample.position;
 				meshData.bentNormals[i] = bentSample.normal;
