@@ -26,7 +26,7 @@ namespace SplineMesh {
         [Tooltip("Material to apply on the bent mesh.")]
         public Material originalMaterial;
         [Tooltip("Physic material to apply on the bent mesh.")]
-        public PhysicMaterial physicMaterial;
+        public PhysicsMaterial physicMaterial;
         [Tooltip("Translation to apply on the mesh before bending it.")]
         public Vector3 translation;
         [Tooltip("Rotation to apply on the mesh before bending it.")]
